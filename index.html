@@ -942,7 +942,7 @@ function panel(html) { $('#panel').innerHTML = html; $('#sheet').hidden = false;
 function closePanel() { $('#sheet').hidden = true; }
 function gtsBest() { try { const v = JSON.parse(localStorage.getItem('familieKatzGTS') || '{}'); const m = Object.keys(v.done || {}).length, h = (v.hats || []).length; return m || h ? `${m}/4 Missionen · ${h}/10 Hüte` : 'Noch nicht gespielt'; } catch (e) { return 'Noch nicht gespielt'; } }
 function gtsIntro() {
-  panel(`<div class="av" style="background-image:url(${avatar('opa')})"></div><div class="kicker">Neuer Modus</div><h3>Grand Theft Staedtlersiedlung</h3><p>Monika ist beim Blumengroßmarkt. Siggi hat die ganze Siedlung für sich. Sein Mitsubishi, Seans Motorrad, Jörgs Laster und Schaf warten. Was soll schon passieren?</p><div class="how">Handy: links drücken und ziehen. Hoch = vorwärts, runter = zurück, links/rechts = drehen. Knöpfe rechts: Einsteigen, Hupe, Radio.<br>PC: W/S vor und zurück, A/D lenken, Shift rennen, E Aktion, H Hupe, R Radio.<br>Gelbe Ringe sind Missionen, zehn Hüte liegen versteckt. Und Vorsicht: Jedes Bier bringt Oma-Sterne. Je mehr Sterne, desto mehr Familie jagt Siggi.</div><div class="btns"><button class="btn alt" id="b-back">Zurück</button><button class="btn" id="b-go">Losfahren</button></div>`);
+  panel(`<div class="av" style="background-image:url(${avatar('opa')})"></div><div class="kicker">Neuer Modus</div><h3>Grand Theft Staedtlersiedlung</h3><p>Monika ist beim Blumengroßmarkt. Siggi hat die ganze Siedlung für sich. Sein Mitsubishi, Seans Motorrad, Jörgs Laster und Schaf warten. Was soll schon passieren?</p><div class="how">Handy: links drücken und ziehen. Hoch = vorwärts, runter = zurück, links/rechts = drehen. Rechts: 🏃 gedrückt halten zum Rennen, dazu Einsteigen, Hupe, Radio.<br>PC: W/S vor und zurück, A/D lenken, Shift rennen, E Aktion, H Hupe, R Radio.<br>Gelbe Ringe sind Missionen, zehn Hüte liegen versteckt. Und Vorsicht: Jedes Bier bringt Oma-Sterne. Je mehr Sterne, desto mehr Familie jagt Siggi.</div><div class="btns"><button class="btn alt" id="b-back">Zurück</button><button class="btn" id="b-go">Losfahren</button></div>`);
   $('#b-back').onclick = () => { SFX.click(); closePanel(); };
   $('#b-go').onclick = () => { audioInit(); SFX.click(); closePanel(); go(GTS('opa')); };
 }
@@ -1783,7 +1783,7 @@ function GTS(who) {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(140, 24, 12), new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false, uniforms:{}, vertexShader:'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }', fragmentShader:'varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 c = mix(vec3(1.0,0.74,0.55), vec3(0.27,0.45,0.82), smoothstep(-0.02,0.55,h)); c = mix(c, vec3(1.0,0.86,0.6), smoothstep(0.9,1.0, dot(normalize(vP), normalize(vec3(-0.6,0.18,-0.75))))); gl_FragColor = vec4(c,1.0); }' }));
     S.scene.add(sky); S.sky = sky;
     S.w = buildSiedlung(S.scene);
-    buildOuter();
+    buildOuter(); decorate();
     // Laternen entlang der Straße
     for (let x = -21; x <= 21; x += 7) [-1, 1].forEach(sd => { cyl(.06, .08, 3.4, 0x3a3f4a, x, 1.7, sd * 2.25, S.scene, 6); const l = sph(.2, new THREE.MeshBasicMaterial({ color:0xffe2a0 }), x, 3.45, sd * 2.25, S.scene, 8); });
     // Rampe auf dem Feld
@@ -1800,7 +1800,7 @@ function GTS(who) {
     S.cols = []; S.scene.updateMatrixWorld(true); const skip = new Set(); Object.values(VEH).forEach(v => v.g.traverse(o => skip.add(o)));
     const bx = new THREE.Box3();
     S.scene.traverse(o => { if (!o.isMesh || skip.has(o) || o === sky) return; bx.setFromObject(o); const h = bx.max.y - bx.min.y, wx = bx.max.x - bx.min.x, wz = bx.max.z - bx.min.z;
-      if (bx.min.y < .6 && h > 1.15 && wx < 14 && wz < 14 && wx * wz > .02) S.cols.push({ x0:bx.min.x, x1:bx.max.x, z0:bx.min.z, z1:bx.max.z }); });
+      if (bx.min.y < .6 && h > 1.15 && wx < 14 && wz < 14 && wx * wz > .02) S.cols.push({ x0:bx.min.x, x1:bx.max.x, z0:bx.min.z, z1:bx.max.z, y1:bx.max.y }); else if (bx.min.y > 1.5 && bx.min.y < 5 && wx < 12 && wz < 12 && wx * wz > 4) S.roofs = (S.roofs || []).concat({ x0:bx.min.x, x1:bx.max.x, z0:bx.min.z, z1:bx.max.z, y1:bx.max.y }); });
     // Familie als Passanten
     S.npcs = []; ORDER.forEach(k => { if (k === who) return; const c = makeChar(k); const [x, z] = NPC_SPOT[k]; c.g.position.set(x, 0, z); c.home = new THREE.Vector3(x, 0, z); S.scene.add(c.g); c.cool = rnd(1, 4); S.npcs.push(c); });
     S.oma = S.npcs.find(c => c.k === 'oma');
@@ -1827,19 +1827,22 @@ function GTS(who) {
       <div id="g-joy" style="position:fixed;left:calc(env(safe-area-inset-left,0px) + 26px);bottom:calc(env(safe-area-inset-bottom,0px) + 30px);width:130px;height:130px;border-radius:50%;border:3px solid rgba(34,24,58,.5);background:rgba(255,247,232,.25);z-index:21;pointer-events:none"><div id="g-knob" style="position:absolute;left:39px;top:39px;width:52px;height:52px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)"></div></div>
       <div style="position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom,0px) + 74px);display:flex;flex-direction:column;gap:10px;align-items:flex-end;z-index:21">
         <button class="btn" id="g-act" hidden style="font-size:16px;padding:12px 18px">Einsteigen</button>
-        <div style="display:flex;gap:10px"><button class="ico" id="g-radio" aria-label="Radiosender wechseln">📻</button><button class="ico" id="g-honk" aria-label="Hupen">📯</button></div>
+        <div style="display:flex;gap:10px;align-items:flex-end"><button class="ico" id="g-radio" aria-label="Radiosender wechseln">📻</button><button class="ico" id="g-honk" aria-label="Hupen">📯</button><button class="btn" id="g-run" aria-label="Rennen gedrückt halten" style="width:74px;height:74px;border-radius:50%;padding:0;font-size:15px;line-height:1.05;touch-action:none">🏃<br>Rennen</button></div>
       </div><div id="g-station" class="pill" style="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:21;font-weight:900;font-size:13px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:5px 12px;box-shadow:0 3px 0 var(--ink)" hidden></div>`;
     if (!MOBILE) { const lg = document.createElement('div'); lg.className = 'pill'; lg.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:21;font-size:12px;line-height:1.5;font-weight:700;background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 3px 0 var(--ink)'; lg.innerHTML = '<b>W / ↑</b> vorwärts · <b>S / ↓</b> zurück/bremsen<br><b>A D / ← →</b> lenken · <b>Shift</b> rennen<br><b>E</b> einsteigen, Bier, Mission · <b>H</b> hupen · <b>R</b> Radio'; ui.appendChild(lg); ui.querySelector('#g-joy').style.display = 'none'; }
     document.body.appendChild(ui);
     $('#g-act').onclick = () => act(); $('#g-honk').onclick = () => honk(); $('#g-radio').onclick = () => radio();
+    const rb = $('#g-run'); if (!MOBILE) rb.style.display = 'none';
+    const runOn = e => { e.preventDefault(); e.stopPropagation(); S.runHeld = true; rb.style.transform = 'translateY(3px)'; }, runOff = () => { S.runHeld = false; rb.style.transform = ''; };
+    rb.addEventListener('pointerdown', runOn); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => rb.addEventListener(ev, runOff));
     S.kd = e => { if (e.repeat) return; keys[e.key.toLowerCase()] = true; const k = e.key.toLowerCase(); if (k === 'e' || k === 'enter') act(); if (k === 'h') honk(); if (k === 'r') radio(); if (k === ' ') e.preventDefault(); };
     S.ku = e => { keys[e.key.toLowerCase()] = false; };
-    addEventListener('keydown', S.kd); addEventListener('keyup', S.ku);
+    S.blur = () => { for (const k in keys) keys[k] = false; }; addEventListener('keydown', S.kd); addEventListener('keyup', S.ku); addEventListener('blur', S.blur);
     S.mapBase = drawMapBase();
     S.camera.position.set(S.x, 6, S.z + 8); S.camLook = new THREE.Vector3(S.x, 1, S.z);
     audioInit(); startMusic('theme'); banner('Staedtlersiedlung'); updHats(); setTimeout(() => { if (cur === S) { const st = $('#g-station'); if (st) { st.textContent = '📻 Staedtler Connection FM'; st.hidden = false; setTimeout(() => st.hidden = true, 2600); } } }, 1500);
     setTimeout(() => cur === S && say(S.me.g, 'Monika ist weg. Jetzt fährt Siggi!', 2200), 600);
-    setTimeout(() => cur === S && showHintText(MOBILE ? '👈 Joystick: hoch = vorwärts, links/rechts = drehen · 🍺 Bier gibt Oma-Sterne' : 'W/S = vor/zurück · A/D = lenken · E = Aktion · 🍺 Bier gibt Oma-Sterne'), 400);
+    setTimeout(() => cur === S && showHintText(MOBILE ? '👈 Joystick: hoch = vorwärts, links/rechts = drehen · 🏃 gedrückt halten = rennen' : 'W/S = vor/zurück · A/D = lenken · E = Aktion · 🍺 Bier gibt Oma-Sterne'), 400);
   };
   function buildOuter() {
     const sc = S.scene, gt = grassTex(); gt.repeat.set(30, 28);
@@ -1870,6 +1873,52 @@ function GTS(who) {
     bottle(0x8a5a12, 0xffd23f, ki).position.set(.6, 1.05, 1.35); BEER.push({ x:36, z:-29.6, name:'Kiosk' });
     BEER.push({ x:-8.4, z:8.9, name:'Opas Bierkasten' }, { x:9.4, z:-6.6, name:'Jörgs Kühlschrank' });
     for (let x = -42; x <= 42; x += 12) [-40, 42].forEach(z => { cyl(.06, .08, 3.4, 0x3a3f4a, x, 1.7, z + 2.6, sc, 6); sph(.2, new THREE.MeshBasicMaterial({ color:0xffe2a0 }), x, 3.45, z + 2.6, sc, 8); });
+  }
+  function decorate() {
+    const sc = S.scene; S.anim = [];
+    const hedge = (x, z, len, alongX) => { const h = box(alongX ? len : .9, 1, alongX ? .9 : len, 0x3f8f3a, x, .5, z, sc); h.castShadow = true; for (let i = 0; i < len / 1.2; i++) sph(.55, 0x4a9e43, x + (alongX ? -len / 2 + .6 + i * 1.2 : 0), 1.0, z + (alongX ? 0 : -len / 2 + .6 + i * 1.2), sc, 7); };
+    const mailbox = (x, z, col = 0xe2354f, papers = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); sc.add(g); cyl(.05, .05, 1.1, 0x666666, 0, .55, 0, g, 6); box(.4, .3, .55, col, 0, 1.2, 0, g); for (let i = 0; i < papers; i++) { const p = box(.32, .04, .42, 0xf4f1e8, rnd(-.6, .6), .03 + i * .045, rnd(-.6, .6), g); p.rotation.y = rnd(0, 3); } return g; };
+    const gnome = (x, z, ry = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; sc.add(g); cyl(.12, .2, .4, pick([0x2f5fb3, 0x3a9d4a]), 0, .2, 0, g, 10); sph(.13, SKIN, 0, .5, 0, g, 8); mk(new THREE.ConeGeometry(.15, .35, 10), M(0xd61f2c), 0, .73, 0, g); mk(new THREE.ConeGeometry(.12, .22, 8), M(0xffffff), 0, .4, .07, g).rotation.x = Math.PI; return g; };
+    const bench = (x, z, ry = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; sc.add(g); box(1.6, .08, .45, 0x9a6a3a, 0, .5, 0, g); box(1.6, .4, .06, 0x9a6a3a, 0, .8, -.2, g); [-.7, .7].forEach(px => box(.08, .5, .4, 0x444444, px, .25, 0, g)); return g; };
+    // Gärten und Hecken
+    hedge(-10.3, -8.5, 12, false); hedge(-0.1, -9.6, 9.6, false); hedge(10.0 + 3.9, -13.5, 7, true);
+    mailbox(-2.6, -2.25); mailbox(-8.9, 2.3, 0x2f5fb3); mailbox(13.4, -2.25, 0x2a6e3a, 7); mailbox(6, -2.25, 0x6d7177);
+    const tr = new THREE.Group(); tr.position.set(-6.2, 0, -13.6); sc.add(tr); mk(new THREE.TorusGeometry(1.4, .08, 6, 28), M(0x2f5fb3), 0, .8, 0, tr).rotation.x = Math.PI / 2; mk(new THREE.CircleGeometry(1.35, 28), M(0x222428), 0, .78, 0, tr).rotation.x = -Math.PI / 2; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; cyl(.04, .04, .8, 0x888888, Math.cos(a) * 1.35, .4, Math.sin(a) * 1.35, tr, 5); }
+    const sw = new THREE.Group(); sw.position.set(-9, 0, -13.8); sc.add(sw); [-1, 1].forEach(sd => { const l1 = cyl(.05, .05, 2.2, 0x9a6a3a, sd * 1.1, 1.05, -.4, sw, 6); l1.rotation.x = .2; const l2 = cyl(.05, .05, 2.2, 0x9a6a3a, sd * 1.1, 1.05, .4, sw, 6); l2.rotation.x = -.2; }); cyl(.05, .05, 2.3, 0x9a6a3a, 0, 2.1, 0, sw, 6).rotation.z = Math.PI / 2; const seat = new THREE.Group(); seat.position.set(0, 2.1, 0); sw.add(seat); [-.25, .25].forEach(px => cyl(.012, .012, 1.5, 0x777777, px, -.75, 0, seat, 4)); box(.6, .05, .25, 0xe2354f, 0, -1.5, 0, seat); S.anim.push(t => { seat.rotation.x = Math.sin(t * 1.6) * .4; });
+    const bbq = new THREE.Group(); bbq.position.set(-3.2, 0, -13.2); sc.add(bbq); mk(new THREE.SphereGeometry(.38, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M(0x1b1b1b), 0, .9, 0, bbq); [0, 2.1, 4.2].forEach(a => { const l = cyl(.025, .025, .9, 0x333333, Math.sin(a) * .25, .45, Math.cos(a) * .25, bbq, 4); l.rotation.set(Math.cos(a) * .25, 0, -Math.sin(a) * .25); });
+    S.anim.push((t, dt) => { if (Math.random() < dt * 3) burst(sc, new THREE.Vector3(-3.2, 1.1, -13.2), 0x9a9a9a, 1, { up:.6, speed:.5, g:-1.2, life:1.6, size:1.2 }); });
+    gnome(-7.8, -3.1, .3); gnome(16.4, -5.9, -.6); gnome(14.2, -4.6, .4); gnome(18.6, -3.9, -.2);
+    // Monikas Gewächshaus
+    const gh = new THREE.Group(); gh.position.set(-16.2, 0, 9.4); sc.add(gh); box(3, 2, 2.2, new THREE.MeshPhongMaterial({ color:0xdff3ff, transparent:true, opacity:.4, shininess:90 }), 0, 1, 0, gh); const ghr = roof(3.2, .9, 2.4, 0xdff3ff, gh); ghr.position.y = 2; ghr.rotation.y = Math.PI / 2; ghr.material = new THREE.MeshPhongMaterial({ color:0xdff3ff, transparent:true, opacity:.45 });
+    for (let i = 0; i < 12; i++) { cyl(.12, .1, .2, 0xb5651d, -1.1 + (i % 6) * .44, .1, i < 6 ? -.5 : .5, gh, 8); sph(.16, pick([0xff5c8a, 0xffd23f, 0xc24bff, 0xff8a3d, 0xffffff]), -1.1 + (i % 6) * .44, .35, i < 6 ? -.5 : .5, gh, 7); }
+    // Jörgs Schrottplatz
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 4 - i; j++) { const t = mk(new THREE.TorusGeometry(.38, .15, 8, 16), M(0x1b1b1b), 13.2 + (j - (3 - i) / 2) * .05, .15 + j * .3, -9.5 + i * .9, sc); t.rotation.x = Math.PI / 2; }
+    const wreck = makeCabrio(0x8a5a3a, sc); wreck.position.set(6.8, 0, -10.6); wreck.rotation.set(0, .7, .05); wreck.scale.setScalar(.8);
+    plane(2.6, .55, signTex('Schrott & Transporte', { size:44, w:600, h:120, bg:'#ffd23f', fg:'#22183a', border:false }), 7.6, 1.9, -2.3, sc, true); cyl(.05, .05, 1.8, 0x888888, 6.5, .9, -2.32, sc, 6); cyl(.05, .05, 1.8, 0x888888, 8.7, .9, -2.32, sc, 6);
+    // Zebrastreifen und Bushaltestelle
+    for (let i = 0; i < 6; i++) box(.45, .03, 2.6, 0xffffff, -5.2 + (i - 2.5) * .8, .05, 0, sc).castShadow = false;
+    const bs = new THREE.Group(); bs.position.set(-16, 0, 2.9); sc.add(bs); box(2.6, .08, 1.2, 0x3a3f4a, 0, 2.3, 0, bs); box(2.6, 2.2, .05, new THREE.MeshPhongMaterial({ color:0xcfe9ff, transparent:true, opacity:.35 }), 0, 1.15, -.55, bs); [-1.25, 1.25].forEach(px => box(.08, 2.3, .08, 0x3a3f4a, px, 1.15, -.5, bs)); bench(0, 0, 0).position.set(-16, 0, 2.7);
+    const hs = new THREE.Group(); hs.position.set(-17.8, 0, 2.6); sc.add(hs); cyl(.05, .05, 2.6, 0x9a9a9a, 0, 1.3, 0, hs, 6); plane(.7, .7, signTex('H', { w:128, h:128, size:90, bg:'#ffd23f', fg:'#1f7a3a' }), 0, 2.5, .06, hs, true);
+    // Spielplatz
+    const pg = new THREE.Group(); pg.position.set(-31, 0, 9); sc.add(pg); box(4, .12, 4, 0xe8d6a8, 0, .06, 0, pg).castShadow = false; const sl = box(.7, .06, 3, 0xe2354f, 1, 1, 0, pg); sl.rotation.x = .55; box(.9, 1.8, .9, 0x2f5fb3, 1, .9, -1.6, pg); bench(-2.6, 2.6, Math.PI / 2).parent.add(new THREE.Group());
+    // Felder: Heuballen, Traktor, Vogelscheuche
+    [[-38, 24], [-31, 31], [-27, 23], [34, 22], [27, 33], [37, 31], [-34, -20], [-26, -28], [30, -22]].forEach(([x, z], i) => { const hb = cyl(.75, .75, 1.1, 0xd9b45a, x, .75, z, sc, 16); hb.rotation.z = Math.PI / 2; hb.rotation.y = i; });
+    const trac = new THREE.Group(); trac.position.set(31, 0, 26); trac.rotation.y = -.8; sc.add(trac); box(1.6, .8, 1, 0x2e8b3a, 0, .9, 0, trac); box(.9, 1, .95, 0x2e8b3a, -.5, 1.7, 0, trac); box(.85, .7, .9, M(0xa8dcff), -.5, 1.75, 0, trac); [[-.6, .55, .8], [-.6, -.55, .8], [.6, .62, .45], [.6, -.62, .45]].forEach(([x, z, r]) => { const w = cyl(r, r, .3, 0x1b1b1b, x, r, z, trac, 14); w.rotation.x = Math.PI / 2; }); cyl(.06, .06, .8, 0x333333, .4, 1.6, .2, trac, 6);
+    const scr = new THREE.Group(); scr.position.set(-30, 0, -24); sc.add(scr); cyl(.06, .06, 2.2, 0x8a5a3a, 0, 1.1, 0, scr, 6); cyl(.05, .05, 1.6, 0x8a5a3a, 0, 1.6, 0, scr, 6).rotation.z = Math.PI / 2; box(.6, .7, .3, 0x3a6fb3, 0, 1.6, 0, scr); sph(.22, 0xe8c48a, 0, 2.2, 0, scr, 8); strawHat(scr, 2.38).scale.setScalar(.7);
+    // Kanal: Schilf, Enten, Boot
+    for (let i = 0; i < 60; i++) { const x = rnd(-60, 60); if (Math.abs(x - 20) < 3) continue; const z = pick([-44.2, -49.8]) + rnd(-.3, .3); const r = cyl(.03, .02, rnd(.7, 1.3), 0x5f8a3a, x, .5, z, sc, 4); r.rotation.z = rnd(-.2, .2); r.castShadow = false; }
+    const ducks = []; for (let i = 0; i < 5; i++) { const d = new THREE.Group(); sph(.22, i ? 0x8a6a3a : 0xffffff, 0, .15, 0, d, 8); sph(.13, i ? 0x2e6b3a : 0xffffff, .2, .32, 0, d, 8); box(.12, .04, .08, 0xff9a1c, .33, .3, 0, d); d.position.set(rnd(-30, 50), .02, -47 + rnd(-1.5, 1.5)); d.userData.ph = rnd(0, 6); sc.add(d); ducks.push(d); }
+    S.anim.push(t => ducks.forEach((d, i) => { d.position.x += Math.sin(t * .2 + d.userData.ph) * .01; d.rotation.y = Math.cos(t * .2 + d.userData.ph) > 0 ? 0 : Math.PI; d.position.y = .02 + Math.sin(t * 2 + i) * .02; }));
+    const boat = new THREE.Group(); boat.position.set(-8, .05, -46.4); sc.add(boat); box(2.2, .35, .9, 0x8a5a3a, 0, .2, 0, boat); box(2, .1, .7, 0x6b4426, 0, .38, 0, boat); S.anim.push(t => { boat.rotation.z = Math.sin(t * 1.2) * .05; boat.position.y = .05 + Math.sin(t * 1.5) * .03; });
+    // Wolken und Vögel
+    const cloudTex = ctex(256, 128, (x, w, h) => { x.fillStyle = 'rgba(255,255,255,.95)'; [[70, 75, 45], [120, 60, 55], [175, 78, 42], [120, 88, 50]].forEach(([cx, cy, r]) => { x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); }); });
+    for (let i = 0; i < 9; i++) { const c = new THREE.Sprite(new THREE.SpriteMaterial({ map:cloudTex, color:0xffe6d2, transparent:true, opacity:.85, fog:false, depthWrite:false })); c.position.set(rnd(-80, 80), rnd(28, 40), rnd(-80, 80)); c.scale.set(rnd(16, 26), rnd(7, 10), 1); sc.add(c); S.anim.push((t, dt) => { c.position.x += dt * .8; if (c.position.x > 90) c.position.x = -90; }); }
+    const birds = new THREE.Group(); sc.add(birds); for (let i = 0; i < 6; i++) { const b = new THREE.Group(); const w1 = box(.5, .03, .14, 0x222222, -.22, 0, 0, b), w2 = box(.5, .03, .14, 0x222222, .22, 0, 0, b); b.position.set(rnd(-3, 3), rnd(-1, 1), rnd(-3, 3)); birds.add(b); S.anim.push(t => { const f = Math.sin(t * 9 + i) * .5; w1.rotation.z = f; w2.rotation.z = -f; }); }
+    S.anim.push(t => { birds.position.set(Math.cos(t * .15) * 30, 16, Math.sin(t * .15) * 26); birds.rotation.y = -t * .15; });
+    // Verkehr auf der Ringstraße
+    const loop = [[-45, -40], [45, -40], [45, 42], [-45, 42]]; const per = 2 * (90 + 82);
+    S.traffic = [0, .25, .5, .72].map((o, i) => { const g = i === 0 && PROP.car ? propClone('car', sc) : makeCabrio(pick([0xe2354f, 0x2f5fb3, 0xffc93c, 0x3a9d4a]), sc); g.scale.setScalar(.9); return { g, d:o * per, sp:rnd(7, 10), x:0, z:0 }; });
+    S.trafficPos = d => { d = ((d % per) + per) % per; const segs = [90, 82, 90, 82]; for (let k = 0; k < 4; k++) { if (d <= segs[k]) { const a = loop[k], b = loop[(k + 1) % 4], f = d / segs[k]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, Math.atan2(b[0] - a[0], b[1] - a[1])]; } d -= segs[k]; } return [0, 0, 0]; };
   }
   function showHintText(t) { const h = $('#hint'); h.textContent = t; h.hidden = false; h.style.opacity = 1; h.style.top = '46%'; setTimeout(() => { h.style.opacity = 0; setTimeout(() => h.hidden = true, 450); }, 4200); }
   function save() { try { localStorage.setItem('familieKatzGTS', JSON.stringify({ hats:[...S.hats], done:S.done })); } catch (e) {} }
@@ -2085,7 +2134,7 @@ function GTS(who) {
       // Blumenbeet von Oma
       if (S.x > -14.6 && S.x < -6.8 && S.z > 10.7 && S.z < 11.9 && Math.abs(S.speed) > 1) { alarmAdd(dt * 60); if (!S.flowerT || S.t > S.flowerT) { S.flowerT = S.t + 2; burst(S.scene, new THREE.Vector3(S.x, .5, S.z), pick([0xff5c8a, 0xffd23f]), 10); if (S.oma && S.oma.g.visible) say(S.oma.g, 'MEINE BLUMEN!', 1500, 'shout'); } }
     } else {
-      const run = keys.shift || inp.m > .85;
+      const run = !!S.runHeld || (joy ? inp.m > .92 : !!keys.shift);
       S.heading += steer * 2.8 * dt; S.speed = thr > .05 ? thr * (run ? 6.2 : 4) : thr < -.05 ? thr * 2 : 0;
       S.x += Math.sin(S.heading) * S.speed * dt; S.z += Math.cos(S.heading) * S.speed * dt; collide(.4);
       S.me.g.position.set(S.x, 0, S.z); S.me.g.rotation.y = S.heading; animChar(S.me, dt, S.speed > 5 ? 'run' : Math.abs(S.speed) > .1 || Math.abs(steer) > .1 ? 'walk' : 'idle');
@@ -2094,10 +2143,17 @@ function GTS(who) {
     const camTarget = S.heading; S.camYaw += angDiff(S.camYaw, camTarget) * Math.min(1, dt * (v ? 2.2 : 1.6));
     const dist = v ? (v.key === 'truck' ? 10 : 8) : 6.2, hgt = v ? 4.6 : 3.6;
     const cp = new THREE.Vector3(S.x - Math.sin(S.camYaw) * dist, hgt + (S.air ? S.air.y * .5 : 0), S.z - Math.cos(S.camYaw) * dist);
+    { const from = new THREE.Vector3(S.x, 1.6, S.z); let free = 1; const blocked = p => S.cols.some(b => p.y < b.y1 + .3 && p.x > b.x0 - .35 && p.x < b.x1 + .35 && p.z > b.z0 - .35 && p.z < b.z1 + .35) || (S.roofs || []).some(b => p.y < b.y1 + .3 && p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1);
+      for (let k = 1; k <= 12; k++) { const f = k / 12; if (blocked(from.clone().lerp(cp, f))) { free = Math.max(.18, (k - 1) / 12); break; } }
+      if (free < 1) { cp.lerpVectors(from, cp, free); cp.y = Math.max(cp.y, 1.9 + (1 - free) * 2.2); } }
     S.camera.position.lerp(cp, 1 - Math.pow(.003, dt)); S.shake = Math.max(0, (S.shake || 0) - dt); if (S.shake) S.camera.position.x += Math.sin(S.t * 70) * S.shake * .5;
     if (S.cine && S.cine.t > 0) { S.cine.t -= dt; const q = S.cine.q; const mid = new THREE.Vector3((S.x + q.x) / 2, 0, (S.z + q.z) / 2); const away = new THREE.Vector3(S.x - q.x, 0, S.z - q.z).normalize(); S.camera.position.lerp(new THREE.Vector3(S.x + away.x * 7 + away.z * 3, 8.5, S.z + away.z * 7 - away.x * 3), 1 - Math.pow(.01, dt)); S.camLook.lerp(new THREE.Vector3(q.x, 1, q.z), 1 - Math.pow(.003, dt)); S.camera.lookAt(S.camLook); q.wait = Math.max(q.wait, .3); }
     else S.camLook.lerp(new THREE.Vector3(S.x + Math.sin(S.heading) * 2, 1.2, S.z + Math.cos(S.heading) * 2), 1 - Math.pow(.002, dt)); if (!(S.cine && S.cine.t > 0)) S.camera.lookAt(S.camLook);
     S.sun.position.set(S.x - 18, 22, S.z + 14); S.sun.target.position.set(S.x, 0, S.z); S.sky.position.set(S.x, 0, S.z); S.scene.fog.far = 150;
+    // Leben in der Welt
+    (S.anim || []).forEach(f => f(S.t, dt));
+    (S.traffic || []).forEach(tc => { tc.d += tc.sp * dt; const [x, z, h] = S.trafficPos(tc.d); const off = 1.1; tc.x = x + Math.cos(h) * off; tc.z = z - Math.sin(h) * off; tc.g.position.set(tc.x, 0, tc.z); tc.g.rotation.y = h + (tc.g.userData.isModel ? 0 : 0);
+      const dd = Math.hypot(tc.x - S.x, tc.z - S.z); if (dd < 2.4) { const ax = S.x - tc.x, az = S.z - tc.z, L = dd || 1; S.x += ax / L * (2.4 - dd); S.z += az / L * (2.4 - dd); if (S.veh) S.speed *= .4; if (!tc.honkT || S.t > tc.honkT) { tc.honkT = S.t + 2; SFX.honk(); if (!S.veh) say(S.me.g, pick(['Huch!', 'Pass doch auf, du Raser!', 'Zu meiner Zeit gab es noch Vorfahrt!']), 1200); } } });
     // Fahrzeuge, die keiner fährt
     Object.values(VEH).forEach(o => { if (o !== v) { o.g.rotation.y = o.heading + o.off; } });
     // Hüte
@@ -2107,6 +2163,7 @@ function GTS(who) {
     const mkN = nearMarker(); S.promptMission = !!mkN;
     if (S.mission) { const ms = S.mission; ms.t -= dt; ms.objs.forEach(o => { if (o.userData && o.userData.label !== undefined) o.children[0].rotation.z += dt * 2; }); ms.m.update(ms, dt); if (S.mission === ms && ms.t <= 0) failMission('Die Zeit ist um. Nochmal?'); }
     // Aktionsknopf
+    const rbn = $('#g-run'); if (rbn && MOBILE) rbn.style.visibility = v ? 'hidden' : 'visible';
     const btn = $('#g-act'); if (btn) { let label = ''; if (mkN && !S.mission) label = '▶ ' + mkN.userData.m.title + (S.done[mkN.userData.m.id] ? ' ' + starStr(S.done[mkN.userData.m.id]) : ''); else if (v) label = 'Aussteigen'; else if (nearBeer()) label = '🍺 Bier trinken'; else { const nv = nearVeh(); if (nv) label = nv.name + ': Einsteigen'; } btn.hidden = !label; if (label && btn.textContent !== label) btn.textContent = label; }
     // Passanten
     S.npcs.forEach(c => {
@@ -2134,7 +2191,7 @@ function GTS(who) {
     setTxt('g-timer', S.mission ? `⏱ ${Math.ceil(S.mission.t)}` : '');
     drawMap();
   };
-  S.dispose = () => { hudOff(); stopMusic(); stopEngine(); if (S.ui) S.ui.remove(); $('#hint').style.top = ''; removeEventListener('keydown', S.kd); removeEventListener('keyup', S.ku); joy = null; $('#hint').hidden = true; };
+  S.dispose = () => { hudOff(); stopMusic(); stopEngine(); if (S.ui) S.ui.remove(); $('#hint').style.top = ''; removeEventListener('keydown', S.kd); removeEventListener('keyup', S.ku); removeEventListener('blur', S.blur); joy = null; $('#hint').hidden = true; };
   return S;
 }
 
